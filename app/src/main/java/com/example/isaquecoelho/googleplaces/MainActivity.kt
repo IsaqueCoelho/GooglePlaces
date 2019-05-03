@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
 import android.text.Editable
+import android.text.TextUtils
 import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.common.api.Status
@@ -13,9 +14,7 @@ import com.google.android.gms.tasks.Task
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.model.PlaceLikelihood
-import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
-import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse
-import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.android.libraries.places.api.net.*
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.karumi.dexter.Dexter
@@ -31,6 +30,8 @@ import kotlin.Comparator
 class MainActivity : AppCompatActivity() {
 
     private val LOG_TAG = "MainActivity"
+
+    lateinit var placesClient: PlacesClient
 
     private var placesFieldList: List<Place.Field> =
         Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS)
@@ -51,7 +52,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPlaces() {
-        Places.initialize(this, getString(R.string.places_api_key))
+        Places.initialize(applicationContext, getString(R.string.places_api_key))
+        placesClient = Places.createClient(this)
     }
 
     private fun setupPlaceAutoComplete() {
@@ -72,58 +74,45 @@ class MainActivity : AppCompatActivity() {
 
     private fun listeningView() {
         button.setOnClickListener { getCurrentPlace() }
+        button_getphoto.setOnClickListener {
+            if(TextUtils.isEmpty(mPlaceId)){
+                Toast.makeText(this@MainActivity, "Places Id mus not be null: ${mPlaceId}", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            } else {
+                getPhotoAndDetail()
+            }
+        }
     }
 
     private fun getCurrentPlace() {
         val request: FindCurrentPlaceRequest = FindCurrentPlaceRequest.builder(placesFieldList).build()
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED){
+                == PackageManager.PERMISSION_GRANTED){
 
-        }
+            val placeResponse: Task<FindCurrentPlaceResponse> = placesClient.findCurrentPlace(request)
 
-        val placesClient: PlacesClient = placesClient.findCurrentPlace(request)
-        val placeResponseTask: Task<FindCurrentPlaceResponse> = placesClient
+            placeResponse.addOnCompleteListener { task ->
+                if (task.isSuccessful){
 
-        placeResponseTask
-            .addOnCompleteListener {
+                    val response = task.result
 
-                if( it.isSuccessful ){
+                    val stringBuilder = StringBuilder()
 
-                    val response = it.result
+                    for (placeLikelihood in response!!.getPlaceLikelihoods()) {
 
-                    if (response != null) {
-                        response.placeLikelihoods.sortWith(object : Comparator<PlaceLikelihood>{
-                            override fun compare(placeLikelihood: PlaceLikelihood?, placeLikelihood2: PlaceLikelihood?): Int {
-                                return placeLikelihood!!.likelihood.compareTo(placeLikelihood2!!.likelihood)
-                            }
-                        })
-
-                        response.placeLikelihoods.reverse()
-
-                        mPlaceId = response.placeLikelihoods[0].place.id.toString()
-
-                        editext_address.setText(StringBuilder(response.placeLikelihoods[0].place.address))
-
-                        lateinit var stringBuilder: StringBuilder
-
-                        for (place in response.placeLikelihoods){
-
-                            stringBuilder.append(place.place.name)
-                                .append(" - Likelihoods value: ")
-                                .append(place.likelihood)
-                                .append("\n")
-
-                        }
-
-                        editext_likehood.setText(stringBuilder)
-
+                        stringBuilder.append(placeLikelihood.place.name)
+                            .append(" - Likelihood value: ")
+                            .append(placeLikelihood.likelihood)
+                            .append("\n")
                     }
 
+                    mPlaceId = response.placeLikelihoods[10].place.id.toString()
+                    editext_likehood.setText(stringBuilder.toString())
                 }
-
             }
-            .addOnFailureListener { Toast.makeText(this, it.message, Toast.LENGTH_LONG).show() }
+
+        }
     }
 
     private fun requestPermission() {
@@ -144,5 +133,33 @@ class MainActivity : AppCompatActivity() {
             }).check()
     }
 
+    private fun getPhotoAndDetail() {
+        val request: FetchPlaceRequest =
+            FetchPlaceRequest.builder(mPlaceId, Arrays.asList(Place.Field.PHOTO_METADATAS, Place.Field.LAT_LNG)).build()
+        placesClient.fetchPlace(request)
+            .addOnSuccessListener { fetchPlaceResponse ->
+                val place = fetchPlaceResponse.place
+                val photoMetadata = place.photoMetadatas!![0]
+                val photoRequest = FetchPhotoRequest.builder(photoMetadata).build()
+
+                placesClient.fetchPhoto(photoRequest)
+                    .addOnSuccessListener {fetchPhotoResponse ->
+                        val bitmap = fetchPhotoResponse.bitmap
+                        imageview_place_photo.setImageBitmap(bitmap)
+                    }
+            }
+            .addOnFailureListener { Toast.makeText(this@MainActivity, it.message, Toast.LENGTH_LONG).show() }
+
+        val requestDetail: FetchPlaceRequest =
+                FetchPlaceRequest.builder(mPlaceId, Arrays.asList(Place.Field.LAT_LNG)).build()
+        placesClient.fetchPlace(requestDetail)
+            .addOnCompleteListener {fetchPlaceResponse ->
+                val place = fetchPlaceResponse.result!!.place
+                textview_place_detail.text = StringBuilder( place.latLng!!.latitude.toString() )
+                    .append("/")
+                    .append( place.latLng!!.longitude.toString() )
+            }
+            .addOnFailureListener { Toast.makeText(this@MainActivity, it.message, Toast.LENGTH_LONG).show() }
+    }
 
 }

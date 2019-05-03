@@ -54,6 +54,21 @@
 
             </android.support.design.widget.TextInputLayout>
 
+            <Button
+                    android:id="@+id/button_getphoto"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="get Photo"/>
+
+            <ImageView
+                    android:id="@+id/imageview_place_photo"
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"/>
+            <TextView
+                    android:id="@+id/textview_place_detail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+
         </LinearLayout>
 
     </ScrollView>

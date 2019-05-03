@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">GooglePlaces</string>
-    <string name="places_api_key"></string>
+    <string name="places_api_key">AIzaSyDJyeshZZynQL7vurORM5CqOZcfunC3PQI</string>
 </resources>
