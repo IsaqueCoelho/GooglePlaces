@@ -49,6 +49,7 @@
                         android:id="@+id/editext_likehood"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:textColor="@android:color/darker_gray"
                         android:hint="Place Likehood"/>
 
             </android.support.design.widget.TextInputLayout>

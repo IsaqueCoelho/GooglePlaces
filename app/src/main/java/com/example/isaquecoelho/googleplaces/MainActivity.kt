@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
+import android.text.Editable
 import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.common.api.Status
@@ -31,7 +32,6 @@ class MainActivity : AppCompatActivity() {
 
     private val LOG_TAG = "MainActivity"
 
-    private lateinit var placesClient: PlacesClient
     private var placesFieldList: List<Place.Field> =
         Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS)
     private lateinit var placesFragment: AutocompleteSupportFragment
@@ -82,7 +82,8 @@ class MainActivity : AppCompatActivity() {
 
         }
 
-        val placeResponseTask: Task<FindCurrentPlaceResponse> = placesClient.findCurrentPlace(request)
+        val placesClient: PlacesClient = placesClient.findCurrentPlace(request)
+        val placeResponseTask: Task<FindCurrentPlaceResponse> = placesClient
 
         placeResponseTask
             .addOnCompleteListener {
@@ -102,7 +103,21 @@ class MainActivity : AppCompatActivity() {
 
                         mPlaceId = response.placeLikelihoods[0].place.id.toString()
 
-                        editext_address.text = StringBuilder(response.placeLikelihoods[0].place.address)
+                        editext_address.setText(StringBuilder(response.placeLikelihoods[0].place.address))
+
+                        lateinit var stringBuilder: StringBuilder
+
+                        for (place in response.placeLikelihoods){
+
+                            stringBuilder.append(place.place.name)
+                                .append(" - Likelihoods value: ")
+                                .append(place.likelihood)
+                                .append("\n")
+
+                        }
+
+                        editext_likehood.setText(stringBuilder)
+
                     }
 
                 }
@@ -117,7 +132,7 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.ACCESS_COARSE_LOCATION))
             .withListener(object: MultiplePermissionsListener {
                 override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
-                    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+
                 }
 
                 override fun onPermissionRationaleShouldBeShown(
